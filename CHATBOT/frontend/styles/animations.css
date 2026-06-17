@@ -1,0 +1,365 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   animations.css — AuraAI
+   Thinking steps timeline, cipher reveal, typing indicator, voice pulse.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   THINKING STEPS TIMELINE
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.thinking-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--step-bg);
+  border: 1.5px solid var(--step-border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  max-width: 85%;
+  align-self: flex-start;
+  animation: msg-in 0.3s var(--ease) both;
+  box-shadow: var(--shadow-sm);
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--step-border);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--dur-fast);
+}
+
+.thinking-header:hover { background: var(--bg-3); }
+
+.thinking-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--step-border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: border-color var(--dur-base);
+}
+
+.thinking-spinner.spin { animation: spin 0.7s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.thinking-spinner.done {
+  border: none;
+  background: none;
+  font-size: 1rem;
+  animation: none;
+  color: var(--step-done);
+  width: auto;
+  height: auto;
+}
+
+.thinking-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-2);
+  flex: 1;
+}
+
+.thinking-count {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  background: var(--bg-3);
+  padding: 2px var(--s2);
+  border-radius: var(--r-full);
+}
+
+.thinking-toggle {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  transition: transform var(--dur-fast);
+}
+
+.thinking-container.collapsed .thinking-toggle { transform: rotate(-90deg); }
+
+.thinking-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  transition: max-height var(--dur-slow) var(--ease);
+  max-height: 800px;
+}
+
+.thinking-container.collapsed .thinking-steps-list { max-height: 0; }
+
+/* Individual step */
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--step-border);
+  position: relative;
+  animation: step-appear 0.3s var(--ease-spring) both;
+}
+
+.step-row:last-child { border-bottom: none; }
+
+@keyframes step-appear {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Vertical connector line */
+.step-row::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--s4) + 7px);
+  top: 50%;
+  width: 2px;
+  height: 100%;
+  background: var(--step-border);
+  transform: translateY(0);
+}
+
+.step-row:last-child::before { display: none; }
+
+.step-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--step-border);
+  background: var(--step-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  transition: border-color var(--dur-base), background var(--dur-base);
+}
+
+.step-indicator.pending {
+  border-color: var(--border);
+}
+
+.step-indicator.active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  animation: step-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow-str); }
+  50% { box-shadow: 0 0 0 6px rgba(124,58,237,0); }
+}
+
+.step-indicator.done {
+  border-color: var(--step-done);
+  background: rgba(5,150,105,.15);
+  font-size: 0.55rem;
+  color: var(--step-done);
+}
+
+.step-indicator.done::after { content: '✓'; font-weight: 800; }
+
+.step-label {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  flex: 1;
+  transition: color var(--dur-base);
+}
+
+.step-row.active .step-label { color: var(--text); font-weight: 500; }
+.step-row.done .step-label   {
+  color: var(--text-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--step-done);
+}
+
+.step-timing {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CIPHER → PLAINTEXT REVEAL
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.cipher-reveal {
+  animation: cipher-appear 0.4s var(--ease) both;
+}
+
+@keyframes cipher-appear {
+  from { opacity: 0; transform: scale(0.98); filter: blur(4px); }
+  to   { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+.cipher-dissolve {
+  animation: cipher-dissolve 0.6s var(--ease) forwards;
+}
+
+@keyframes cipher-dissolve {
+  0%   { opacity: 1; filter: blur(0); }
+  40%  { opacity: 0.6; filter: blur(3px); }
+  100% { opacity: 0; filter: blur(8px); transform: scale(0.97); }
+}
+
+.reveal-char {
+  display: inline;
+  opacity: 0;
+  animation: char-reveal 0.04s ease forwards;
+}
+
+@keyframes char-reveal {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* AI bubble during reveal */
+.bubble-ai.revealing {
+  background: var(--surface-2);
+  border-color: rgba(124,58,237,.3);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  transition: background 0.5s var(--ease), border-color 0.5s var(--ease), box-shadow 0.5s var(--ease);
+}
+
+.bubble-ai.revealed {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: background 0.5s var(--ease), border-color 0.5s var(--ease), box-shadow 0.5s var(--ease);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   VOICE PULSE
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes voice-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(220,38,38,.45); }
+  70%  { box-shadow: 0 0 0 12px rgba(220,38,38,0); }
+  100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+}
+
+.voice-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+}
+
+.voice-wave span {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--danger);
+}
+
+.voice-wave span:nth-child(1) { animation: wave-bar 0.9s ease-in-out infinite 0.00s; }
+.voice-wave span:nth-child(2) { animation: wave-bar 0.9s ease-in-out infinite 0.10s; }
+.voice-wave span:nth-child(3) { animation: wave-bar 0.9s ease-in-out infinite 0.20s; }
+.voice-wave span:nth-child(4) { animation: wave-bar 0.9s ease-in-out infinite 0.15s; }
+.voice-wave span:nth-child(5) { animation: wave-bar 0.9s ease-in-out infinite 0.05s; }
+
+@keyframes wave-bar {
+  0%, 100% { height: 4px; opacity: 0.5; }
+  50% { height: 16px; opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   THEME TOGGLE TRANSITION
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.theme-icon {
+  display: inline-block;
+  transition: transform 0.4s var(--ease-spring), opacity 0.3s ease;
+}
+
+.theme-toggling .theme-icon {
+  animation: theme-flip 0.45s var(--ease-spring);
+}
+
+@keyframes theme-flip {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(0.5); opacity: 0.3; }
+  100% { transform: rotate(360deg) scale(1); opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TOAST ANIMATIONS
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateX(24px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toast-slide-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(24px); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DRAG & DROP OVERLAY
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+#drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(124, 58, 237, 0.08);
+  border: 3px dashed var(--accent);
+  border-radius: var(--r-xl);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  animation: drop-pulse 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+#drop-overlay.visible { display: flex; }
+
+.drop-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  color: var(--accent);
+  font-family: var(--font-heading);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}
+
+@keyframes drop-pulse {
+  0%, 100% { background: rgba(124,58,237,.06); }
+  50% { background: rgba(124,58,237,.14); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   UTILITIES
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fade-in { animation: fade-in 0.3s var(--ease) both; }
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-2) 25%,
+    var(--bg-3) 50%,
+    var(--bg-2) 75%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--r-sm);
+}
+
+@keyframes skeleton-shimmer {
+  from { background-position: 100% 50%; }
+  to   { background-position: 0% 50%; }
+}

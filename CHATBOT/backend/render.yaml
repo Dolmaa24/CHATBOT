@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: auraai-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FERNET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://your-frontend.vercel.app
+      - key: GROQ_MODEL
+        value: llama3-70b-8192
+      - key: GROQ_MAX_TOKENS
+        value: "2048"
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          type: web
+          name: auraai-backend
+          property: host
+    healthCheckPath: /health

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+env/
+
+# Secrets — NEVER commit
+backend/.env
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (if any tooling is added later)
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+logs/
+
+# Compiled / output
+*.pyc
+*.pyo

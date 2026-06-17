@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  <!-- SEO -->
+  <title>AuraAI — Secure AI Chat with AES Encryption</title>
+  <meta name="description" content="Beautiful AI chatbot with live Fernet AES-128-CBC encryption, file analysis (PDF, DOCX, images), voice I/O, and a clean modern design. Powered by Groq llama3-70b-8192." />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="AuraAI — Secure Conversational AI" />
+  <meta property="og:description" content="Chat with live encryption display, voice I/O, and document analysis." />
+  <meta property="og:type" content="website" />
+
+  <!-- Favicon (inline SVG — zero HTTP request) -->
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237C3AED'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='18' fill='white'%3E✦%3C/text%3E%3C/svg%3E" />
+
+  <!--
+    J3 FIX: Apply theme BEFORE first paint to eliminate Flash of Incorrect Theme (FOIT).
+    This tiny synchronous inline script reads localStorage and sets data-theme
+    before any CSS renders. DOMContentLoaded is too late.
+  -->
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('eai_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) { /* localStorage blocked (privacy mode) — silently use default */ }
+    })();
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/animations.css" />
+</head>
+
+<body>
+
+<!-- Drag & Drop Overlay -->
+<div id="drop-overlay" aria-hidden="true" role="presentation">
+  <div class="drop-label">
+    <span style="font-size:3rem" aria-hidden="true">📎</span>
+    <span>Drop your file here</span>
+  </div>
+</div>
+
+<!-- App Shell -->
+<div id="app">
+
+  <!-- ─── SIDEBAR ─────────────────────────────────────────────────────────── -->
+  <aside id="sidebar" aria-label="Conversation history">
+
+    <div class="sidebar-head">
+      <div class="sidebar-brand">
+        <div class="brand-icon" aria-hidden="true">✦</div>
+        <span class="brand-name">AuraAI</span>
+      </div>
+
+      <button id="btn-new-chat" class="btn-new-chat" aria-label="Start a new conversation">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        New Chat
+      </button>
+    </div>
+
+    <nav class="sidebar-sessions" aria-label="Conversations">
+      <div class="sessions-label" aria-hidden="true">Recent</div>
+      <div id="session-list" role="list" aria-label="Conversation history list"></div>
+    </nav>
+
+    <div class="sidebar-foot">
+      <span class="sidebar-foot-badge">
+        <span class="badge-dot" aria-hidden="true"></span>
+        Fernet E2E
+      </span>
+      <span style="font-size:0.72rem;color:var(--text-3)">v2.0</span>
+    </div>
+
+  </aside>
+
+  <!-- Mobile backdrop — click to close sidebar -->
+  <div id="sidebar-backdrop"
+       style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;"
+       aria-hidden="true"
+       tabindex="-1"></div>
+
+  <!-- ─── MAIN ─────────────────────────────────────────────────────────────── -->
+  <main id="main" aria-label="Chat interface">
+
+    <!-- Header -->
+    <header id="header" role="banner">
+      <div class="header-left">
+        <button id="btn-sidebar-toggle"
+                class="btn-icon"
+                aria-label="Toggle sidebar"
+                aria-expanded="true"
+                aria-controls="sidebar"
+                title="Toggle sidebar">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect y="2" width="16" height="2" rx="1" fill="currentColor"/>
+            <rect y="7" width="16" height="2" rx="1" fill="currentColor"/>
+            <rect y="12" width="16" height="2" rx="1" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <h1 id="header-session-name"
+            class="header-session-name"
+            aria-live="polite"
+            aria-label="Current conversation name"></h1>
+      </div>
+
+      <div class="header-right">
+        <!-- Request counter -->
+        <div id="req-counter" class="req-counter" style="display:none"
+             role="status" aria-label="Remaining requests">
+          <span class="req-dot" aria-hidden="true"></span>
+          <span id="req-remaining">—</span>
+          <span class="req-label">/200</span>
+        </div>
+
+        <!-- Model selector -->
+        <div class="model-selector" title="Select AI model">
+          <select id="model-select" aria-label="Select AI model"></select>
+          <span class="model-arrow" aria-hidden="true">▾</span>
+        </div>
+
+        <!-- AES-256-GCM encryption status pill -->
+        <div id="enc-pill"
+             class="enc-pill"
+             style="display:none;"
+             role="status"
+             aria-label="AES-256-GCM encryption active"
+             title="AES-256-GCM + HMAC-SHA-512 client-side encryption is active">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--success);"
+                aria-hidden="true"></span>
+          AES-256-GCM
+        </div>
+
+        <!-- Theme toggle -->
+        <button id="btn-theme"
+                class="btn-icon"
+                aria-label="Switch to dark mode"
+                title="Toggle dark/light mode">
+          <span class="theme-icon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages -->
+    <section id="chat-area"
+             role="log"
+             aria-label="Conversation messages"
+             aria-live="polite"
+             aria-atomic="false"
+             aria-relevant="additions">
+
+      <!-- Welcome Screen (hidden once first message is sent) -->
+      <div id="welcome" aria-labelledby="welcome-heading">
+
+        <!-- Brand mark -->
+        <div class="welcome-orb" aria-hidden="true">✦</div>
+
+        <!-- Time-based greeting (filled by JS) -->
+        <p class="welcome-greeting" id="welcome-greeting" aria-hidden="true"></p>
+
+        <h2 id="welcome-heading" class="welcome-heading">
+          How can I help<br>you <em>today?</em>
+        </h2>
+
+        <!-- Capability cards — 2 × 2 clickable grid -->
+        <div class="welcome-cards" role="list" aria-label="Start a conversation">
+
+          <button class="welcome-card" role="listitem"
+                  data-prompt="Write a professional email to my manager requesting a day off next Friday">
+            <span class="wcard-icon" aria-hidden="true">✍️</span>
+            <div class="wcard-body">
+              <span class="wcard-title">Write &amp; Edit</span>
+              <span class="wcard-desc">Emails, essays, cover letters, creative content</span>
+            </div>
+          </button>
+
+          <button class="welcome-card" role="listitem"
+                  data-prompt="Explain how machine learning works in simple, beginner-friendly terms">
+            <span class="wcard-icon" aria-hidden="true">🔍</span>
+            <div class="wcard-body">
+              <span class="wcard-title">Analyze &amp; Research</span>
+              <span class="wcard-desc">Summarize docs, explain concepts, find insights</span>
+            </div>
+          </button>
+
+          <button class="welcome-card" role="listitem"
+                  data-prompt="Write a Python function to find all prime numbers up to N using the Sieve of Eratosthenes">
+            <span class="wcard-icon" aria-hidden="true">💻</span>
+            <div class="wcard-body">
+              <span class="wcard-title">Code &amp; Debug</span>
+              <span class="wcard-desc">Write, review, fix, or explain code in any language</span>
+            </div>
+          </button>
+
+          <button class="welcome-card" role="listitem"
+                  data-prompt="Explain how AES-256-CBC encryption and HMAC-SHA256 keep my messages private in this app">
+            <span class="wcard-icon" aria-hidden="true">🔐</span>
+            <div class="wcard-body">
+              <span class="wcard-title">Explore Encryption</span>
+              <span class="wcard-desc">How AES-256 and HMAC protect your messages</span>
+            </div>
+          </button>
+
+        </div>
+
+        <!-- Quick-start chips -->
+        <div class="welcome-chips" role="list" aria-label="Quick prompts">
+          <button class="welcome-chip" role="listitem"
+                  data-prompt="Summarise the key ideas from the document I just uploaded">
+            📋 Summarise a doc
+          </button>
+          <button class="welcome-chip" role="listitem"
+                  data-prompt="What are the best practices for writing clean, maintainable JavaScript?">
+            🧹 Clean code tips
+          </button>
+          <button class="welcome-chip" role="listitem"
+                  data-prompt="Give me 5 creative ideas for a weekend project I can build in a day">
+            💡 Weekend project ideas
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Input Bar -->
+    <footer id="input-bar" aria-label="Message input area">
+      <div class="input-inner">
+
+        <!-- File chip (shown after file is attached and parsed) -->
+        <div id="file-chip"
+             aria-label="Attached file"
+             aria-live="polite"
+             role="status">
+          <span id="chip-icon" class="chip-icon" aria-hidden="true">📄</span>
+          <span id="chip-name" class="chip-name"></span>
+          <span id="chip-size" class="chip-size"></span>
+          <button id="btn-chip-remove"
+                  class="chip-remove"
+                  aria-label="Remove attached file">✕</button>
+        </div>
+
+        <!-- Voice recording status banner -->
+        <div id="voice-status"
+             role="status"
+             aria-live="assertive"
+             aria-label="Voice recording active">
+          <div class="voice-wave" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <span>Listening…</span>
+        </div>
+
+        <!-- Input row -->
+        <div class="input-row" id="input-row">
+
+          <!-- Attach button -->
+          <button id="btn-attach"
+                  class="btn-icon"
+                  aria-label="Attach a file (PDF, DOCX, image, or text)"
+                  title="Attach file">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.5 7L7.5 13a4 4 0 01-5.657-5.657l6.364-6.364a2.5 2.5 0 013.536 3.536L5.38 10.88a1 1 0 01-1.415-1.414L9.62 3.81"
+                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <!-- Hidden native file picker -->
+          <input type="file"
+                 id="file-input"
+                 accept=".pdf,.doc,.docx,.txt,.csv,.md,.png,.jpg,.jpeg,.webp,.gif,.tiff,.bmp"
+                 aria-label="Select a file to upload for analysis"
+                 tabindex="-1" />
+
+          <!-- Message textarea -->
+          <textarea id="message-input"
+                    placeholder="Message AuraAI… (Shift+Enter for new line)"
+                    rows="1"
+                    aria-label="Type your message"
+                    aria-multiline="true"
+                    autocomplete="off"
+                    spellcheck="true"
+                    aria-describedby="input-hint"></textarea>
+
+          <!-- Right controls -->
+          <div class="input-actions" role="group" aria-label="Message controls">
+
+            <!-- Voice input -->
+            <button id="btn-voice"
+                    class="btn-icon"
+                    aria-label="Start voice input"
+                    aria-pressed="false"
+                    title="Voice input — click to record">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <rect x="5" y="1" width="6" height="9" rx="3" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M2 8a6 6 0 0012 0M8 14v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+
+            <!-- Send -->
+            <button id="btn-send"
+                    class="btn-send"
+                    aria-label="Send message"
+                    title="Send message (Enter)"
+                    disabled>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M9 15V3M3 9l6-6 6 6"
+                      stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Input hints / status footer -->
+        <div class="input-footer" id="input-hint" aria-live="polite">
+          <span id="footer-status" style="font-size:0.72rem;color:var(--text-3)">Initialising…</span>
+          <span style="font-size:0.72rem;color:var(--text-3)">
+            Groq · llama3-70b-8192 · Fernet encrypted
+          </span>
+        </div>
+
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+<!-- ── Crypto Inspector Panel ──────────────────────────────────────────────── -->
+<aside id="crypto-inspector"
+       class="inspector-panel"
+       aria-hidden="true"
+       aria-label="Crypto Inspector">
+  <div class="inspector-head">
+    <div class="inspector-title-row">
+      <span class="inspector-icon" aria-hidden="true">🔬</span>
+      <h3 class="inspector-title">Crypto Inspector</h3>
+    </div>
+    <button id="btn-close-inspector"
+            class="btn-icon"
+            aria-label="Close Crypto Inspector">✕</button>
+  </div>
+  <p class="inspector-sub">
+    AES-256-GCM encrypted in your browser using the Web Crypto API.
+    Keys derived via PBKDF2 · 100 000 iterations · SHA-512.
+    Keys live only in memory — never sent to any server.
+  </p>
+  <dl id="inspector-fields" class="inspector-fields"></dl>
+</aside>
+
+<!-- Toast notifications -->
+<div id="toast-root"
+     aria-label="Notifications"
+     aria-atomic="false"
+     aria-relevant="additions"></div>
+
+<!-- ES modules — app.js is the entry point; it imports everything else -->
+<script type="module" src="src/app.js"></script>
+
+</body>
+</html>
