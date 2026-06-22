@@ -7,7 +7,7 @@ const _IS_DEV = window.location.hostname === 'localhost'
 
 export const BACKEND_URL = _IS_DEV
   ? 'http://localhost:8000'
-  : 'https://your-auraai-backend.onrender.com';
+  : 'https://auraai-backend-ob2f.onrender.com';
 
 export const API_ROUTES = {
   health:     '/health',
