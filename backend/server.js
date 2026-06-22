@@ -126,6 +126,9 @@ app.get('/health', (req, res) => res.json({
 
 app.get('/', (req, res) => res.json({ service: 'AuraAI Backend', version: '3.0.0', health: '/health' }));
 
+// Lightweight ping endpoint — used by UptimeRobot / external keep-warm services
+app.get('/ping', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 // ── Chat — non-streaming (fallback) ───────────────────────────────────────────
 
 app.post('/api/chat', async (req, res) => {
